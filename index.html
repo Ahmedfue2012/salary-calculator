@@ -63,14 +63,17 @@ footer strong{color:var(--tx);display:block;font-size:16px}
 </header>
 
 <div class="tabs">
-<button id="t2">من الصافي للإجمالي</button>
-<button id="t1" class="on">من الإجمالي للصافي</button>
+<button id="t2" class="on">من الصافي للإجمالي</button>
+<button id="t1">من الإجمالي للصافي</button>
 </div>
 
 <div class="panel">
-<label id="lbl" for="amt">الراتب الإجمالي الشهري (جنيه)</label>
+<label for="cat">فئة المؤمن عليه</label>
+<select id="cat"><option value="0">تحت سن الستين</option><option value="60">فوق سن الستين</option></select>
+<p class="hint" id="rateHint">نسبة تأمينات الموظف لهذه الفئة ثابتة: 11%</p>
+<label id="lbl" for="amt">الراتب الصافي المطلوب (جنيه)</label>
 <input id="amt" type="number" inputmode="decimal" placeholder="مثال: 15000">
-<label for="ins">الأجر التأميني (اختياري، ولو فاضي بيتحسب على الإجمالي)</label>
+<label for="ins">الأجر التأميني (اختياري، ولو فاضي بيتحسب تلقائياً = الإجمالي ÷ 1.3 بعد استبعاد 30% بدلات)</label>
 <input id="ins" type="number" inputmode="decimal" placeholder="مثال: 8000">
 <details><summary>إعدادات النسب والحدود</summary>
 <div class="g2">
@@ -78,13 +81,8 @@ footer strong{color:var(--tx);display:block;font-size:16px}
 <div><label for="mn">أدنى أجر تأميني</label><input id="mn" type="number" value="2700"></div>
 <div><label for="mx">أقصى أجر تأميني</label><input id="mx" type="number" value="16700"></div>
 <div><label for="ex">الإعفاء الشخصي سنوياً</label><input id="ex" type="number" value="20000"></div>
-<div><label for="xp">نسبة البدلات المستبعدة %</label><input id="xp" type="number" value="30" step="1"></div>
 </div>
-<label class="chk"><input id="chk" type="checkbox"> حساب آلي وتطبيق 30% بدلات مستبعدة</label>
-<p class="hint">لما تتفعل ولم تكتب أجر تأميني، الأجر التأميني بيتحسب = الإجمالي ناقص نسبة البدلات المستبعدة (بين الحد الأدنى والأقصى). لو كتبت أجر تأميني بنفسك، بيتم استخدامه.</p>
-<label for="cat">فئة المؤمن عليه</label>
-<select id="cat"><option value="0">تحت سن الستين</option><option value="60">فوق سن الستين</option></select>
-<p class="hint" id="rateHint">نسبة تأمينات الموظف لهذه الفئة ثابتة: 11%</p></details>
+</details>
 </div>
 
 <div id="out"></div>
@@ -98,7 +96,7 @@ footer strong{color:var(--tx);display:block;font-size:16px}
 </main>
 
 <script>
-var mode=1;
+var mode=2;
 var UP=[40000,55000,70000,200000,400000,1200000,Infinity],RT=[0,.10,.15,.20,.225,.25,.275];
 function $(i){return document.getElementById(i)}
 function v(i){var x=parseFloat($(i).value);return isNaN(x)?0:x}
@@ -116,12 +114,12 @@ function annualTax(t){
   return tax;
 }
 function calc(g){
-  var raw=v("ins")>0?v("ins"):($("chk").checked?g*(1-v("xp")/100):g);
+  var raw=v("ins")>0?v("ins"):g/1.3;
   var base=Math.min(Math.max(raw,v("mn")),v("mx"));
   if(g<=0)base=0;
   var ins=base*($("cat").value=="60"?1:11)/100;
   var mf=g*v("mp")/100;
-  var tax=annualTax((g-ins)*12-v("ex"))/12;
+  var tax=annualTax(Math.floor(g-ins)*12-v("ex"))/12;
   return{g:g,base:base,ins:ins,mf:mf,tax:tax,net:g-ins-mf-tax};
 }
 function solve(net){
@@ -166,8 +164,7 @@ function setMode(m){
 }
 $("t1").onclick=function(){setMode(1)};
 $("t2").onclick=function(){setMode(2)};
-["amt","ins","mp","mn","mx","ex","xp"].forEach(function(i){$(i).oninput=render});
-$("chk").onchange=render;
+["amt","ins","mp","mn","mx","ex"].forEach(function(i){$(i).oninput=render});
 $("cat").onchange=function(){$("rateHint").textContent="نسبة تأمينات الموظف لهذه الفئة ثابتة: "+(this.value=="60"?"1%":"11%");render()};
 </script>
 </body>
