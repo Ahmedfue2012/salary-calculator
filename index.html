@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>حاسبة الراتب الصافي – مصر</title>
+<title>حاسبة الراتب – مصر</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -28,6 +28,10 @@ input{width:100%;padding:12px 14px;font:inherit;font-size:20px;font-weight:600;b
 input:focus{outline:2px solid var(--net);outline-offset:1px}
 details{margin-top:14px}
 summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--mut)}
+.chk{display:flex;align-items:center;gap:10px;margin:14px 0 4px;font-size:14px;font-weight:600;color:var(--tx);cursor:pointer}
+.chk input{width:22px;height:22px;padding:0;accent-color:var(--net)}
+select{width:100%;padding:12px;font:inherit;font-size:15px;border:1px solid var(--bd);border-radius:10px;background:var(--in);color:var(--tx)}
+.hint{font-size:12px;color:var(--mut);margin:4px 0 0}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
 .g2 input{font-size:16px}
 .result{background:var(--hero);color:var(--herotx);border-radius:18px;padding:20px 18px 18px;margin-bottom:12px}
@@ -54,13 +58,13 @@ footer strong{color:var(--tx);display:block;font-size:16px}
 <body>
 <main>
 <header>
-<h1>حاسبة الراتب الصافي</h1>
-<p>التأمينات والضريبة وصندوق الشهداء – مصر</p>
+<h1>حاسبة الراتب</h1>
+<p>التأمينات والضريبة وصندوق الشهداء</p>
 </header>
 
 <div class="tabs">
-<button id="t1" class="on">من الإجمالي للصافي</button>
 <button id="t2">من الصافي للإجمالي</button>
+<button id="t1" class="on">من الإجمالي للصافي</button>
 </div>
 
 <div class="panel">
@@ -70,17 +74,22 @@ footer strong{color:var(--tx);display:block;font-size:16px}
 <input id="ins" type="number" inputmode="decimal" placeholder="مثال: 8000">
 <details><summary>إعدادات النسب والحدود</summary>
 <div class="g2">
-<div><label for="ip">تأمينات الموظف %</label><input id="ip" type="number" value="11" step="0.01"></div>
 <div><label for="mp">صندوق الشهداء %</label><input id="mp" type="number" value="0.05" step="0.01"></div>
 <div><label for="mn">أدنى أجر تأميني</label><input id="mn" type="number" value="2700"></div>
 <div><label for="mx">أقصى أجر تأميني</label><input id="mx" type="number" value="16700"></div>
 <div><label for="ex">الإعفاء الشخصي سنوياً</label><input id="ex" type="number" value="20000"></div>
-</div></details>
+<div><label for="xp">نسبة البدلات المستبعدة %</label><input id="xp" type="number" value="30" step="1"></div>
+</div>
+<label class="chk"><input id="chk" type="checkbox"> حساب آلي وتطبيق 30% بدلات مستبعدة</label>
+<p class="hint">لما تتفعل ولم تكتب أجر تأميني، الأجر التأميني بيتحسب = الإجمالي ناقص نسبة البدلات المستبعدة (بين الحد الأدنى والأقصى). لو كتبت أجر تأميني بنفسك، بيتم استخدامه.</p>
+<label for="cat">فئة المؤمن عليه</label>
+<select id="cat"><option value="0">تحت سن الستين</option><option value="60">فوق سن الستين</option></select>
+<p class="hint" id="rateHint">نسبة تأمينات الموظف لهذه الفئة ثابتة: 11%</p></details>
 </div>
 
 <div id="out"></div>
 
-<p class="note">الأرقام تقديرية. حدود التأمينات (2700 إلى 16700) سارية من يناير 2026، والشرائح الضريبية حسب قانون 91 لسنة 2005 وتعديلاته. الحساب لا يشمل الدمغة والبدلات المعفاة، فراجع قسم الحسابات عندك للتفاصيل الدقيقة.</p>
+<p class="note">الأرقام تقديرية. حدود التأمينات (2700 إلى 16700) سارية من يناير 2026، والشرائح الضريبية حسب قانون 91 لسنة 2005 وتعديلاته.</p>
 
 <footer>
 تصميم وإعداد
@@ -107,13 +116,13 @@ function annualTax(t){
   return tax;
 }
 function calc(g){
-  var raw=v("ins")>0?v("ins"):g;
+  var raw=v("ins")>0?v("ins"):($("chk").checked?g*(1-v("xp")/100):g);
   var base=Math.min(Math.max(raw,v("mn")),v("mx"));
   if(g<=0)base=0;
-  var ins=base*v("ip")/100;
+  var ins=base*($("cat").value=="60"?1:11)/100;
   var mf=g*v("mp")/100;
   var tax=annualTax((g-ins)*12-v("ex"))/12;
-  return{g:g,ins:ins,mf:mf,tax:tax,net:g-ins-mf-tax};
+  return{g:g,base:base,ins:ins,mf:mf,tax:tax,net:g-ins-mf-tax};
 }
 function solve(net){
   var lo=net,hi=net*3+20000;
@@ -147,7 +156,7 @@ function render(){
   '<div class="r"><span><b style="background:var(--fund)"></b>صندوق الشهداء</span><strong>− '+f(r.mf)+'</strong></div>'+
   '<div class="r"><span>إجمالي الخصومات</span><strong>− '+f(tot)+'</strong></div>'+
   '<div class="r sum"><span><b style="background:var(--net)"></b>الصافي الشهري</span><strong>'+f(r.net)+'</strong></div>'+
-  '<div class="r"><span>الصافي السنوي</span><strong>'+f(r.net*12)+'</strong></div></div>';
+  '<div class="r"><span>الأجر التأميني (المحسوب عليه)</span><strong>'+f(r.base)+'</strong></div></div>';
 }
 function setMode(m){
   mode=m;
@@ -157,7 +166,9 @@ function setMode(m){
 }
 $("t1").onclick=function(){setMode(1)};
 $("t2").onclick=function(){setMode(2)};
-["amt","ins","ip","mp","mn","mx","ex"].forEach(function(i){$(i).oninput=render});
+["amt","ins","mp","mn","mx","ex","xp"].forEach(function(i){$(i).oninput=render});
+$("chk").onchange=render;
+$("cat").onchange=function(){$("rateHint").textContent="نسبة تأمينات الموظف لهذه الفئة ثابتة: "+(this.value=="60"?"1%":"11%");render()};
 </script>
 </body>
 </html>
