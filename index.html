@@ -3,13 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>حاسبة الراتب – مصر</title>
+<title>حاسبة الراتب</title>
+<meta property="og:title" content="حاسبة الراتب">
+<meta property="og:description" content="احسب الراتب الصافي أو الإجمالي: التأمينات والضريبة وصندوق الشهداء">
+<meta name="description" content="احسب الراتب الصافي أو الإجمالي: التأمينات والضريبة وصندوق الشهداء">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#eaf0f3;--card:#fff;--tx:#0e2a3b;--mut:#5c7280;--bd:#d5e0e6;--hero:#0e2a3b;--herotx:#fff;
---net:#1fb59f;--ins:#4a86c5;--tax:#e39a3b;--fund:#9a6bc4;--in:#f4f8fa}
-@media (prefers-color-scheme:dark){:root{--bg:#0b1820;--card:#13252f;--tx:#e8f0f4;--mut:#8fa6b3;--bd:#24404e;--hero:#0a3a3a;--in:#0e1e27}}
+--net:#1fb59f;--ins:#4a86c5;--tax:#e39a3b;--fund:#9a6bc4;--in:#f4f8fa;--gb:#d3e4f6;--gg:#dbe9cc}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1820;--card:#13252f;--tx:#e8f0f4;--mut:#8fa6b3;--bd:#24404e;--hero:#0a3a3a;--in:#0e1e27;--gb:#1b3a55;--gg:#254226}}
 *{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--tx);font-family:Cairo,Tahoma,system-ui,sans-serif;line-height:1.7;
@@ -46,6 +49,9 @@ select{width:100%;padding:12px;font:inherit;font-size:15px;border:1px solid var(
 .rows{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:4px 16px;margin-bottom:12px}
 .r{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--bd)}
 .r:last-child{border:0}
+.r.gb,.r.gg{margin:0 -16px;padding-left:16px;padding-right:16px}
+.r.gb{background:var(--gb);font-weight:800}
+.r.gg{background:var(--gg);font-weight:800}
 .r span{display:flex;align-items:center;gap:8px}
 .r span b{width:10px;height:10px;border-radius:3px}
 .r strong{direction:ltr;font-weight:600}
@@ -71,7 +77,7 @@ footer strong{color:var(--tx);display:block;font-size:16px}
 <label for="cat">فئة المؤمن عليه</label>
 <select id="cat"><option value="0">تحت سن الستين</option><option value="60">فوق سن الستين</option></select>
 <p class="hint" id="rateHint">نسبة تأمينات الموظف لهذه الفئة ثابتة: 11%</p>
-<label id="lbl" for="amt">الراتب الصافي المطلوب (جنيه)</label>
+<label id="lbl" for="amt">الصافي المطلوب قبل صندوق الشهداء (جنيه)</label>
 <input id="amt" type="number" inputmode="decimal" placeholder="مثال: 15000">
 <label for="ins">الأجر التأميني (اختياري، ولو فاضي بيتحسب تلقائياً = الإجمالي ÷ 1.3 بعد استبعاد 30% بدلات)</label>
 <input id="ins" type="number" inputmode="decimal" placeholder="مثال: 8000">
@@ -103,7 +109,7 @@ function v(i){var x=parseFloat($(i).value);return isNaN(x)?0:x}
 function f(n){return n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
 function annualTax(t){
   if(t<=0)return 0;
-  var s=t<=6e5?0:t<=7e5?1:t<=8e5?2:t<=9e5?3:t<=1.2e6?4:6;
+  var s=t<=6e5?0:t<=7e5?1:t<=8e5?2:t<=9e5?3:t<=1.2e6?4:5;
   var tax=0,lo=0;
   for(var i=s;i<UP.length;i++){
     var hi=Math.min(UP[i],t);
@@ -119,47 +125,51 @@ function calc(g){
   if(g<=0)base=0;
   var ins=base*($("cat").value=="60"?1:11)/100;
   var mf=g*v("mp")/100;
-  var tax=annualTax(Math.floor(g-ins)*12-v("ex"))/12;
+  var tax=annualTax(Math.floor(((g-ins)*12-v("ex"))/10)*10)/12;
   return{g:g,base:base,ins:ins,mf:mf,tax:tax,net:g-ins-mf-tax};
 }
-function solve(net){
-  var lo=net,hi=net*3+20000;
-  for(var i=0;i<80;i++){var m=(lo+hi)/2;if(calc(m).net<net)lo=m;else hi=m}
+function solve(target){
+  var lo=target,hi=target*3+20000;
+  for(var i=0;i<80;i++){var m=(lo+hi)/2,c=calc(m);if(c.g-c.ins-c.tax<target)lo=m;else hi=m}
   return calc((lo+hi)/2);
 }
 function pct(x,g){return g>0?Math.max(0,x/g*100):0}
 function render(){
   var a=v("amt");
   if(a<=0){$("out").innerHTML="";return}
-  var r=mode==1?calc(a):solve(a);
-  var tot=r.ins+r.mf+r.tax;
-  var title=mode==1?"صافي الراتب الشهري":"الراتب الإجمالي المطلوب";
-  var val=mode==1?r.net:r.g;
+  var m2=mode==2,d=m2?0:2;
+  function F(n){return n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})}
+  var g=m2?Math.floor(solve(a).g+1e-9):a;
+  var r=calc(g),ins=r.ins,tax=r.tax,fund=r.mf,base=r.base;
+  var allow=Math.max(0,Math.min(0.3*base,g-base));
+  if(m2){ins=Math.round(ins);tax=Math.round(tax);fund=Math.round(fund);base=Math.round(base);allow=Math.round(allow)}
+  var inc=Math.max(0,g-base-allow);
+  var net=m2?a-fund:r.net;
+  var title=m2?"الإجمالي المطلوب في العقد":"صافي الراتب";
+  var val=m2?g:net;
+  function row(l,x,c){return '<div class="r'+(c?' '+c:'')+'"><span>'+l+'</span><strong>'+F(x)+'</strong></div>'}
   $("out").innerHTML=
-  '<div class="result"><small>'+title+'</small><div class="num">'+f(val)+'<i>جنيه</i></div>'+
+  '<div class="result"><small>'+title+'</small><div class="num">'+F(val)+'<i>جنيه</i></div>'+
   '<div class="bar">'+
-  '<span style="width:'+pct(r.net,r.g)+'%;background:var(--net)"></span>'+
-  '<span style="width:'+pct(r.ins,r.g)+'%;background:var(--ins)"></span>'+
-  '<span style="width:'+pct(r.tax,r.g)+'%;background:var(--tax)"></span>'+
-  '<span style="width:'+pct(r.mf,r.g)+'%;background:var(--fund)"></span></div>'+
+  '<span style="width:'+pct(net,g)+'%;background:var(--net)"></span>'+
+  '<span style="width:'+pct(ins,g)+'%;background:var(--ins)"></span>'+
+  '<span style="width:'+pct(tax,g)+'%;background:var(--tax)"></span>'+
+  '<span style="width:'+pct(fund,g)+'%;background:var(--fund)"></span></div>'+
   '<div class="legend">'+
-  '<em><b style="background:var(--net)"></b>الصافي '+pct(r.net,r.g).toFixed(1)+'%</em>'+
-  '<em><b style="background:var(--ins)"></b>تأمينات '+pct(r.ins,r.g).toFixed(1)+'%</em>'+
-  '<em><b style="background:var(--tax)"></b>ضريبة '+pct(r.tax,r.g).toFixed(1)+'%</em>'+
-  '<em><b style="background:var(--fund)"></b>شهداء '+pct(r.mf,r.g).toFixed(2)+'%</em></div></div>'+
+  '<em><b style="background:var(--net)"></b>الصافي '+pct(net,g).toFixed(1)+'%</em>'+
+  '<em><b style="background:var(--ins)"></b>تأمينات '+pct(ins,g).toFixed(1)+'%</em>'+
+  '<em><b style="background:var(--tax)"></b>ضريبة '+pct(tax,g).toFixed(1)+'%</em>'+
+  '<em><b style="background:var(--fund)"></b>شهداء '+pct(fund,g).toFixed(2)+'%</em></div></div>'+
   '<div class="rows">'+
-  '<div class="r"><span>الراتب الإجمالي</span><strong>'+f(r.g)+'</strong></div>'+
-  '<div class="r"><span><b style="background:var(--ins)"></b>التأمينات الاجتماعية</span><strong>− '+f(r.ins)+'</strong></div>'+
-  '<div class="r"><span><b style="background:var(--tax)"></b>ضريبة كسب العمل</span><strong>− '+f(r.tax)+'</strong></div>'+
-  '<div class="r"><span><b style="background:var(--fund)"></b>صندوق الشهداء</span><strong>− '+f(r.mf)+'</strong></div>'+
-  '<div class="r"><span>إجمالي الخصومات</span><strong>− '+f(tot)+'</strong></div>'+
-  '<div class="r sum"><span><b style="background:var(--net)"></b>الصافي الشهري</span><strong>'+f(r.net)+'</strong></div>'+
-  '<div class="r"><span>الأجر التأميني (المحسوب عليه)</span><strong>'+f(r.base)+'</strong></div></div>';
+  row("الأجر التأميني",base)+row("البدلات",allow)+row("الحوافز",inc)+
+  row("الإجمالي المطلوب في العقد",g,"gb")+
+  row("ضريبة كسب عمل",tax)+row("حصة العامل بالتأمينات",ins)+row("صندوق الشهداء",fund)+
+  row("صافي الراتب",net,"gg")+'</div>';
 }
 function setMode(m){
   mode=m;
   $("t1").className=m==1?"on":"";$("t2").className=m==2?"on":"";
-  $("lbl").textContent=m==1?"الراتب الإجمالي الشهري (جنيه)":"الراتب الصافي المطلوب (جنيه)";
+  $("lbl").textContent=m==1?"الراتب الإجمالي الشهري (جنيه)":"الصافي المطلوب قبل صندوق الشهداء (جنيه)";
   render();
 }
 $("t1").onclick=function(){setMode(1)};
